@@ -1,0 +1,8 @@
+{
+  "one": "Hello world",
+  "two": {
+    "a": "first",
+    "b": "second"
+  },
+  "three": [1, 25, 150]
+}
