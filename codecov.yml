@@ -1,3 +1,11 @@
+coverage:
+  precision: 2
+  round: down
+  status:
+    project:
+      default:
+        informational: true
+
 ignore:
 - "**/tests"
 - "**/benches"
