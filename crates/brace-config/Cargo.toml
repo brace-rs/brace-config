@@ -1,0 +1,8 @@
+[package]
+name = "brace-config"
+version = "0.1.0"
+authors = ["Daniel Balcomb <daniel.balcomb@gmail.com>"]
+description = "A comprehensive configuration management utility."
+repository = "https://github.com/brace-rs/brace-config"
+license = "MIT OR Apache-2.0"
+edition = "2018"
