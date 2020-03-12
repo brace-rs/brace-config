@@ -215,6 +215,7 @@ jobs:
       uses: actions-rs/tarpaulin@v0.1
       with:
         version: latest
+        args: --ignore-tests
 
     - name: Upload code coverage
       uses: codecov/codecov-action@v1
