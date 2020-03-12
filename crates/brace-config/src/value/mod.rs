@@ -377,3 +377,46 @@ impl From<HashMap<String, Value>> for Value {
         Value::Table(Table::from(value))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Array, Entry, Table, Value};
+
+    #[test]
+    fn test_entry() {
+        assert!(Value::entry().is_entry());
+        assert!(!Value::entry().is_array());
+        assert!(!Value::entry().is_table());
+        assert!(Value::from(Entry::new()).is_entry());
+
+        assert_eq!(Value::entry().as_entry(), Some(&Entry::new()));
+        assert_eq!(
+            Value::from("hi").as_entry(),
+            Some(&Entry(String::from("hi")))
+        );
+        assert_eq!(
+            Value::from(String::from("hello")).as_entry(),
+            Some(&Entry(String::from("hello")))
+        );
+    }
+
+    #[test]
+    fn test_array() {
+        assert!(Value::array().is_array());
+        assert!(!Value::array().is_entry());
+        assert!(!Value::array().is_table());
+        assert!(Value::from(Array::new()).is_array());
+
+        assert_eq!(Value::array().as_array(), Some(&Array::new()));
+    }
+
+    #[test]
+    fn test_table() {
+        assert!(Value::table().is_table());
+        assert!(!Value::table().is_entry());
+        assert!(!Value::table().is_array());
+        assert!(Value::from(Table::new()).is_table());
+
+        assert_eq!(Value::table().as_table(), Some(&Table::new()));
+    }
+}
