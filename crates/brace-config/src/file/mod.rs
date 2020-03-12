@@ -1,9 +1,7 @@
 use std::path::Path;
 
-use serde::de::DeserializeOwned;
-use serde::ser::Serialize;
-
 use self::error::Error;
+use crate::Config;
 
 pub mod error;
 
@@ -16,9 +14,8 @@ pub mod toml;
 #[cfg(feature = "yaml")]
 pub mod yaml;
 
-pub fn load<T, P>(path: P) -> Result<T, Error>
+pub fn load<P>(path: P) -> Result<Config, Error>
 where
-    T: DeserializeOwned,
     P: AsRef<Path>,
 {
     match path.as_ref().extension() {
@@ -41,21 +38,20 @@ where
     }
 }
 
-pub fn save<T, P>(path: P, value: &T) -> Result<(), Error>
+pub fn save<P>(path: P, config: &Config) -> Result<(), Error>
 where
-    T: Serialize,
     P: AsRef<Path>,
 {
     match path.as_ref().extension() {
         Some(ext) => match ext.to_str() {
             #[cfg(feature = "json")]
-            Some("json") => self::json::save(path, value),
+            Some("json") => self::json::save(path, config),
             #[cfg(feature = "toml")]
-            Some("toml") => self::toml::save(path, value),
+            Some("toml") => self::toml::save(path, config),
             #[cfg(feature = "yaml")]
-            Some("yaml") => self::yaml::save(path, value),
+            Some("yaml") => self::yaml::save(path, config),
             #[cfg(feature = "yaml")]
-            Some("yml") => self::yaml::save(path, value),
+            Some("yml") => self::yaml::save(path, config),
             Some(ext) => Err(Error::invalid_file_type(
                 Some(ext.to_string()),
                 path.as_ref(),
