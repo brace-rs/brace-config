@@ -5,7 +5,7 @@ use std::vec::IntoIter;
 use serde::de::{Deserialize, Deserializer, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeSeq, Serializer};
 
-use super::{de::ValueDeserializer, ser::ValueSerializer, Error, Value};
+use super::{de::ValueDeserializer, ser::ValueSerializer, Error, Key, Value};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Array(Vec<Value>);
@@ -17,28 +17,89 @@ impl Array {
 
     pub fn get<'de, K, V>(&'de self, key: K) -> Result<V, Error>
     where
-        K: Into<usize>,
+        K: Into<Key>,
         V: 'de + Deserialize<'de>,
     {
-        let key = key.into();
+        let mut key = key.into();
 
-        match self.0.get(key) {
-            Some(value) => V::deserialize(ValueDeserializer::new(value)).map_err(Error::custom),
-            None => Err(Error::custom(format!("missing value for '{}'", key))),
+        match key.next() {
+            Some(head) => match head.parse::<usize>() {
+                Ok(head) => match self.0.get(head) {
+                    Some(val) => match key.peek() {
+                        Some(_) => val.get(key),
+                        None => Ok(V::deserialize(ValueDeserializer::new(val))?),
+                    },
+                    None => Err(Error::custom(format!("missing value for key '{}'", head))),
+                },
+                Err(_) => Err(Error::custom(format!("invalid key '{}'", head))),
+            },
+            None => Err(Error::custom("empty key")),
         }
     }
 
-    pub fn set<K, V>(&mut self, key: K, value: V) -> Result<&mut Self, Error>
+    pub fn set<K, V>(&mut self, key: K, val: V) -> Result<&mut Self, Error>
     where
-        K: Into<usize>,
+        K: Into<Key>,
         V: Serialize,
     {
-        self.0.insert(
-            key.into(),
-            value.serialize(ValueSerializer).map_err(Error::custom)?,
-        );
+        let mut key = key.into();
 
-        Ok(self)
+        match key.next() {
+            Some(head) => match head.parse::<usize>() {
+                Ok(index) => match self.0.get_mut(index) {
+                    Some(item) => match key.peek() {
+                        Some(_) => {
+                            item.set(key, val)?;
+
+                            Ok(self)
+                        }
+                        None => {
+                            *item = val.serialize(ValueSerializer)?;
+
+                            Ok(self)
+                        }
+                    },
+                    None => {
+                        if index == 0 {
+                            match key.peek() {
+                                Some(_) => {
+                                    let mut value = Value::entry();
+                                    value.set(key, val)?;
+                                    self.0.insert(index, value);
+
+                                    Ok(self)
+                                }
+                                None => {
+                                    self.0.insert(index, val.serialize(ValueSerializer)?);
+
+                                    Ok(self)
+                                }
+                            }
+                        } else {
+                            match self.0.get(index - 1) {
+                                Some(_) => match key.peek() {
+                                    Some(_) => {
+                                        let mut value = Value::entry();
+                                        value.set(key, val)?;
+                                        self.0.insert(index, value);
+
+                                        Ok(self)
+                                    }
+                                    None => {
+                                        self.0.insert(index, val.serialize(ValueSerializer)?);
+
+                                        Ok(self)
+                                    }
+                                },
+                                None => Err(Error::custom(format!("invalid index '{}'", index))),
+                            }
+                        }
+                    }
+                },
+                Err(_) => Err(Error::custom(format!("invalid key '{}'", head))),
+            },
+            None => Err(Error::custom("empty key")),
+        }
     }
 }
 

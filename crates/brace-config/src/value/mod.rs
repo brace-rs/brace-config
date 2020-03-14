@@ -12,11 +12,13 @@ use self::ser::ValueSerializer;
 pub use self::array::Array;
 pub use self::entry::Entry;
 pub use self::error::Error;
+pub use self::key::Key;
 pub use self::table::Table;
 
 mod array;
 mod entry;
 mod error;
+mod key;
 mod table;
 
 pub(crate) mod de;
@@ -58,45 +60,65 @@ impl Value {
 
     pub fn get<'de, K, V>(&'de self, key: K) -> Result<V, Error>
     where
-        K: AsRef<str>,
+        K: Into<Key>,
         V: 'de + Deserialize<'de>,
     {
         match self {
             Value::Entry(_) => Err(Error::custom("call `get` on entry variant")),
+            Value::Array(array) => array.get(key),
             Value::Table(table) => table.get(key),
-            Value::Array(array) => match key.as_ref().parse::<usize>() {
-                Ok(key) => array.get(key),
-                Err(_) => Err(Error::custom(format!(
-                    "call `get` on array variant with invalid key '{}'",
-                    key.as_ref()
-                ))),
-            },
         }
     }
 
     pub fn set<K, V>(&mut self, key: K, value: V) -> Result<&mut Self, Error>
     where
-        K: AsRef<str>,
+        K: Into<Key>,
         V: Serialize,
     {
-        match self {
-            Value::Entry(_) => Err(Error::custom("call `set` on entry variant")),
-            Value::Table(table) => {
-                table.set(key, value)?;
+        let key = key.into();
 
-                Ok(self)
-            }
-            Value::Array(array) => match key.as_ref().parse::<usize>() {
-                Ok(key) => {
-                    array.set(key, value)?;
+        match key.peek() {
+            Some(head) => match self {
+                Value::Entry(_) => match head.parse::<usize>() {
+                    Ok(_) => {
+                        let mut array = Value::array();
+                        array.set(key, value)?;
+                        *self = array;
+
+                        Ok(self)
+                    }
+                    Err(_) => {
+                        let mut table = Value::table();
+                        table.set(key, value)?;
+                        *self = table;
+
+                        Ok(self)
+                    }
+                },
+                Value::Array(array) => match head.parse::<usize>() {
+                    Ok(_) => {
+                        array.set(key, value)?;
+
+                        Ok(self)
+                    }
+                    Err(_) => {
+                        let mut table = Value::table();
+                        for (index, item) in array.into_iter().enumerate() {
+                            table.set(index, item)?;
+                        }
+                        table.set(key, value)?;
+                        *self = table;
+
+                        Ok(self)
+                    }
+                },
+                Value::Table(table) => {
+                    table.set(key, value)?;
 
                     Ok(self)
                 }
-                Err(_) => Err(Error::custom(format!(
-                    "call `set` on array variant with invalid key '{}'",
-                    key.as_ref()
-                ))),
             },
+            None => Err(Error::custom("empty key")),
         }
     }
 
