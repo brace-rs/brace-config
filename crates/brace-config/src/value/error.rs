@@ -20,3 +20,15 @@ impl Display for Error {
 }
 
 impl StdError for Error {}
+
+impl From<super::ser::Error> for Error {
+    fn from(from: super::ser::Error) -> Self {
+        Self::custom(from)
+    }
+}
+
+impl From<super::de::Error> for Error {
+    fn from(from: super::de::Error) -> Self {
+        Self::custom(from)
+    }
+}

@@ -4,7 +4,7 @@ use std::fmt;
 use serde::de::{Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
-use super::{de::ValueDeserializer, ser::ValueSerializer, Error, Value};
+use super::{de::ValueDeserializer, ser::ValueSerializer, Error, Key, Value};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Table(HashMap<String, Value>);
@@ -16,28 +16,49 @@ impl Table {
 
     pub fn get<'de, K, V>(&'de self, key: K) -> Result<V, Error>
     where
-        K: AsRef<str>,
+        K: Into<Key>,
         V: 'de + Deserialize<'de>,
     {
-        let key = key.as_ref();
+        let mut key = key.into();
 
-        match self.0.get(key) {
-            Some(value) => V::deserialize(ValueDeserializer::new(value)).map_err(Error::custom),
-            None => Err(Error::custom(format!("missing value for '{}'", key))),
+        match key.next() {
+            Some(head) => match self.0.get(&head) {
+                Some(val) => match key.peek() {
+                    Some(_) => val.get(key),
+                    None => Ok(V::deserialize(ValueDeserializer::new(val))?),
+                },
+                None => Err(Error::custom(format!("missing value for key '{}'", head))),
+            },
+            None => Err(Error::custom("empty key")),
         }
     }
 
-    pub fn set<K, V>(&mut self, key: K, value: V) -> Result<&mut Table, Error>
+    pub fn set<K, V>(&mut self, key: K, val: V) -> Result<&mut Table, Error>
     where
-        K: AsRef<str>,
+        K: Into<Key>,
         V: Serialize,
     {
-        self.0.insert(
-            key.as_ref().to_string(),
-            value.serialize(ValueSerializer).map_err(Error::custom)?,
-        );
+        let mut key = key.into();
 
-        Ok(self)
+        match key.next() {
+            Some(head) => {
+                let item = self.0.entry(head).or_insert_with(Value::entry);
+
+                match key.peek() {
+                    Some(_) => {
+                        item.set(key, val)?;
+
+                        Ok(self)
+                    }
+                    None => {
+                        *item = val.serialize(ValueSerializer)?;
+
+                        Ok(self)
+                    }
+                }
+            }
+            None => Err(Error::custom("empty key")),
+        }
     }
 }
 

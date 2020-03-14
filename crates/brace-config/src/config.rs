@@ -3,7 +3,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::file::{load, save};
-use crate::value::{Error, Table};
+use crate::value::{Error, Key, Table};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(transparent)]
@@ -16,7 +16,7 @@ impl Config {
 
     pub fn get<'de, K, V>(&'de self, key: K) -> Result<V, Error>
     where
-        K: AsRef<str>,
+        K: Into<Key>,
         V: 'de + Deserialize<'de>,
     {
         self.0.get(key)
@@ -24,7 +24,7 @@ impl Config {
 
     pub fn set<K, V>(&mut self, key: K, value: V) -> Result<&mut Config, Error>
     where
-        K: AsRef<str>,
+        K: Into<Key>,
         V: Serialize,
     {
         self.0.set(key, value)?;
@@ -309,6 +309,15 @@ mod tests {
                 c: arr.clone(),
             })
         );
+
+        assert_eq!(cfg.get::<_, String>("a"), Ok(String::from("A")));
+        assert_eq!(cfg.get::<_, String>("b.B"), Ok(String::from("B")));
+        assert_eq!(cfg.get::<_, String>("c.C.0"), Ok(String::from("C")));
+        assert_eq!(cfg.get::<_, String>("c.C.1.b"), Ok(String::from("2")));
+        assert_eq!(cfg.get::<_, String>("c.C.2.0"), Ok(String::from("a")));
+        assert_eq!(cfg.get::<_, String>("d.D.a"), Ok(String::from("A")));
+        assert_eq!(cfg.get::<_, String>("e.E.c.1"), Ok(String::from("b")));
+        assert_eq!(cfg.get::<_, String>("e.E.b.a"), Ok(String::from("1")));
     }
 
     #[test]
@@ -333,5 +342,33 @@ mod tests {
             cfg.get::<_, Ipv4Addr>("ipv4"),
             Ok(Ipv4Addr::new(127, 0, 0, 1))
         );
+    }
+
+    #[test]
+    fn test_nested() {
+        let mut cfg = Config::new();
+
+        assert!(cfg.set("one", "1").is_ok());
+        assert!(cfg.set("two", "2").is_ok());
+
+        assert_eq!(cfg.get::<_, String>("one"), Ok(String::from("1")));
+        assert_eq!(cfg.get::<_, String>("two"), Ok(String::from("2")));
+
+        assert!(cfg.set("one.two", "3").is_ok());
+        assert!(cfg.set("two.0", "a").is_ok());
+        assert!(cfg.set("two.2", "c").is_err());
+        assert!(cfg.set("two.1", "b").is_ok());
+        assert!(cfg.set("two.2", "c").is_ok());
+
+        assert_eq!(cfg.get::<_, String>("one.two"), Ok(String::from("3")));
+        assert_eq!(cfg.get::<_, String>("two.0"), Ok(String::from("a")));
+        assert_eq!(cfg.get::<_, String>("two.1"), Ok(String::from("b")));
+        assert_eq!(cfg.get::<_, String>("two.2"), Ok(String::from("c")));
+
+        assert!(cfg.set("one.two.three", "6").is_ok());
+        assert!(cfg.set("0.0.0.a.0", "A").is_ok());
+
+        assert_eq!(cfg.get::<_, String>("one.two.three"), Ok(String::from("6")));
+        assert_eq!(cfg.get::<_, String>("0.0.0.a.0"), Ok(String::from("A")));
     }
 }
