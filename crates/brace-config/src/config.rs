@@ -367,8 +367,15 @@ mod tests {
 
         assert!(cfg.set("one.two.three", "6").is_ok());
         assert!(cfg.set("0.0.0.a.0", "A").is_ok());
+        assert!(cfg.set("0.1.0.b.0", "B").is_ok());
 
         assert_eq!(cfg.get::<_, String>("one.two.three"), Ok(String::from("6")));
         assert_eq!(cfg.get::<_, String>("0.0.0.a.0"), Ok(String::from("A")));
+        assert_eq!(cfg.get::<_, String>("0.1.0.b.0"), Ok(String::from("B")));
+
+        assert!(cfg.set("0.zero.0.a.0", "A").is_ok());
+
+        assert_eq!(cfg.get::<_, String>("0.0.0.a.0"), Ok(String::from("A")));
+        assert_eq!(cfg.get::<_, String>("0.zero.0.a.0"), Ok(String::from("A")));
     }
 }
