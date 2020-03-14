@@ -1,13 +1,14 @@
-use std::collections::hash_map::{HashMap, IntoIter, Iter, IterMut};
+use std::collections::HashMap;
 use std::fmt;
 
+use indexmap::map::{IndexMap, IntoIter, Iter, IterMut};
 use serde::de::{Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
 use super::{de::ValueDeserializer, ser::ValueSerializer, Error, Key, Value};
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Table(HashMap<String, Value>);
+pub struct Table(IndexMap<String, Value>);
 
 impl Table {
     pub fn new() -> Self {
@@ -64,7 +65,7 @@ impl Table {
 
 impl Default for Table {
     fn default() -> Self {
-        Self(HashMap::new())
+        Self(IndexMap::new())
     }
 }
 
@@ -108,7 +109,7 @@ impl<'de> Deserialize<'de> for Table {
             where
                 V: MapAccess<'de>,
             {
-                let mut map = HashMap::new();
+                let mut map = IndexMap::new();
 
                 while let Some(key) = visitor.next_key()? {
                     map.insert(key, visitor.next_value()?);
@@ -150,8 +151,20 @@ impl<'a> IntoIterator for &'a mut Table {
 }
 
 impl From<HashMap<String, Value>> for Table {
-    fn from(map: HashMap<String, Value>) -> Self {
+    fn from(from: HashMap<String, Value>) -> Self {
+        let mut map = IndexMap::new();
+
+        for (key, val) in from {
+            map.insert(key, val);
+        }
+
         Self(map)
+    }
+}
+
+impl From<IndexMap<String, Value>> for Table {
+    fn from(from: IndexMap<String, Value>) -> Self {
+        Self(from)
     }
 }
 

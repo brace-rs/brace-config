@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt::{self, Display};
 
+use indexmap::IndexMap;
 use serde::ser::{
     Error as SerError, Impossible, Serialize, SerializeMap, SerializeSeq, SerializeStruct,
     SerializeStructVariant, SerializeTuple, SerializeTupleStruct, SerializeTupleVariant,
@@ -136,7 +136,7 @@ impl Serializer for ValueSerializer {
     where
         T: ?Sized + Serialize,
     {
-        let mut map = HashMap::new();
+        let mut map = IndexMap::new();
 
         map.insert(String::from(variant), value.serialize(self)?);
 
@@ -176,7 +176,7 @@ impl Serializer for ValueSerializer {
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
         Ok(TableMapSerializer {
-            map: HashMap::new(),
+            map: IndexMap::new(),
             next_key: None,
         })
     }
@@ -198,7 +198,7 @@ impl Serializer for ValueSerializer {
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         Ok(TableMapMatrixSerializer {
             name: String::from(variant),
-            map: HashMap::new(),
+            map: IndexMap::new(),
         })
     }
 }
@@ -280,7 +280,7 @@ impl SerializeTupleVariant for ArraySeqMatrixSerializer {
     }
 
     fn end(self) -> Result<Value, Error> {
-        let mut map = HashMap::new();
+        let mut map = IndexMap::new();
 
         map.insert(self.name, Value::from(self.seq));
 
@@ -289,7 +289,7 @@ impl SerializeTupleVariant for ArraySeqMatrixSerializer {
 }
 
 pub struct TableMapSerializer {
-    pub(crate) map: HashMap<String, Value>,
+    pub(crate) map: IndexMap<String, Value>,
     pub(crate) next_key: Option<String>,
 }
 
@@ -344,7 +344,7 @@ impl SerializeStruct for TableMapSerializer {
 
 pub struct TableMapMatrixSerializer {
     pub(crate) name: String,
-    pub(crate) map: HashMap<String, Value>,
+    pub(crate) map: IndexMap<String, Value>,
 }
 
 impl SerializeStructVariant for TableMapMatrixSerializer {
@@ -362,7 +362,7 @@ impl SerializeStructVariant for TableMapMatrixSerializer {
     }
 
     fn end(self) -> Result<Value, Error> {
-        let mut map = HashMap::new();
+        let mut map = IndexMap::new();
 
         map.insert(self.name, Value::from(self.map));
 
