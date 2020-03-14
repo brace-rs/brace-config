@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use indexmap::IndexMap;
 use serde::de::{
     Deserialize, DeserializeOwned, Deserializer, IntoDeserializer, MapAccess, SeqAccess, Visitor,
 };
@@ -252,7 +253,7 @@ impl<'de> Deserialize<'de> for Value {
             where
                 V: MapAccess<'de>,
             {
-                let mut map = HashMap::new();
+                let mut map = IndexMap::new();
 
                 while let Some(key) = visitor.next_key()? {
                     map.insert(key, visitor.next_value()?);
@@ -396,6 +397,12 @@ impl From<Vec<Value>> for Value {
 
 impl From<HashMap<String, Value>> for Value {
     fn from(value: HashMap<String, Value>) -> Self {
+        Value::Table(Table::from(value))
+    }
+}
+
+impl From<IndexMap<String, Value>> for Value {
+    fn from(value: IndexMap<String, Value>) -> Self {
         Value::Table(Table::from(value))
     }
 }
