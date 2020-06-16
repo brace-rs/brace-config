@@ -53,6 +53,12 @@ impl Default for Config {
     }
 }
 
+impl From<Table> for Config {
+    fn from(table: Table) -> Self {
+        Self(table)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

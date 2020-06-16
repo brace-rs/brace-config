@@ -10,6 +10,10 @@ impl Entry {
     pub fn new() -> Self {
         Self::default()
     }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
 }
 
 impl Default for Entry {
