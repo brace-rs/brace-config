@@ -113,8 +113,8 @@ mod tests {
     fn test_float() {
         let mut cfg = Config::new();
 
-        assert!(cfg.set("f32", 32 as f32).is_ok());
-        assert!(cfg.set("f64", 64 as f64).is_ok());
+        assert!(cfg.set::<_, f32>("f32", 32.0).is_ok());
+        assert!(cfg.set::<_, f64>("f64", 64.0).is_ok());
 
         assert_eq!(cfg.get::<_, f32>("f32"), Ok(32.0 as f32));
         assert_eq!(cfg.get::<_, f64>("f64"), Ok(64.0 as f64));
@@ -305,8 +305,8 @@ mod tests {
             cfg.get::<_, Complex>("e"),
             Ok(Complex::E {
                 a: String::from("a"),
-                b: map.clone(),
-                c: arr.clone(),
+                b: map,
+                c: arr,
             })
         );
 
